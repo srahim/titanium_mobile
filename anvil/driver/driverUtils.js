@@ -192,7 +192,10 @@ module.exports = new function() {
 					callback();
 
 				} else {
-					wrench.rmdirSyncRecursive(path.resolve(driverGlobal.logsDir, driverGlobal.platform.name, dirsMap[dirTimestamps[oldestDirIndex]]), false);
+					var dirPath = path.resolve(driverGlobal.logsDir, driverGlobal.platform.name, dirsMap[dirTimestamps[oldestDirIndex]]);
+					if (fs.lstatSync(dirPath).isDirectory()) {
+						wrench.rmdirSyncRecursive(dirPath, false);
+					}
 					deleteLog(--oldestDirIndex);
 				}
 			}
