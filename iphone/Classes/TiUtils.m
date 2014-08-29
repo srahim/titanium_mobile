@@ -20,6 +20,7 @@
 #import "TiBlob.h"
 #import "Base64Transcoder.h"
 #import "TiExceptionHandler.h"
+#import "TiApp.h"
 
 // for checking version
 #import <sys/utsname.h>
@@ -1453,6 +1454,21 @@ if ([str isEqualToString:@#orientation]) return (UIDeviceOrientation)orientation
 {
     CGRect mainScreen = [[UIScreen mainScreen] bounds];
     CGRect rect = [[UIScreen mainScreen] applicationFrame];
+    if ([TiUtils isIOS8OrGreater]) {
+        NSLog(@"Current transform main screen : %@ , rect : %@", NSStringFromCGRect(mainScreen) , NSStringFromCGRect(rect));
+        CGPoint mainScreenOrigin = mainScreen.origin;
+        UIView * cv = [[TiApp app] topMostView];
+    
+        mainScreen = [cv.window.screen.coordinateSpace convertRect:mainScreen toCoordinateSpace:cv];
+        mainScreen.origin = mainScreenOrigin;
+        
+        CGPoint rectOrigin = rect.origin;
+        rect = [cv.window.screen.coordinateSpace convertRect:rect toCoordinateSpace:cv];
+        rect.origin = rectOrigin;
+        
+        
+    }
+    NSLog(@"After transform main screen : %@ , rect : %@", NSStringFromCGRect(mainScreen) , NSStringFromCGRect(rect));
     if ([TiUtils isIOS7OrGreater]) {
         NSUInteger edges = [(id<TiUIViewControllerIOS7Support>)theController edgesForExtendedLayout];
         //Check if I cover status bar
@@ -1460,6 +1476,7 @@ if ([str isEqualToString:@#orientation]) return (UIDeviceOrientation)orientation
             return mainScreen;
         }
     }
+    
     return rect;
 }
 

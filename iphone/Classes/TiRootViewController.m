@@ -934,8 +934,9 @@
 -(CGRect)resizeView
 {
     CGRect rect = [TiUtils frameForController:self];
+//    [[super view] setFrame:rect];
     [[self view] setFrame:rect];
-    return [[self view]bounds];
+    return [[self view] bounds];
 }
 
 -(void)repositionSubviews
@@ -965,11 +966,15 @@
 
 - (BOOL)shouldRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation checkModal:(BOOL)check
 {
-    return TI_ORIENTATION_ALLOWED([self getFlags:check],toInterfaceOrientation) ? YES : NO;
+    BOOL value =  TI_ORIENTATION_ALLOWED([self getFlags:check],toInterfaceOrientation) ? YES : NO;
+    UIInterfaceOrientation orient = [self getFlags:check];
+//    FunctionName(@" [self getFlags:check]result : %@", value ? @"YES" : @"NO");
+    return value;
 }
 
 -(void)adjustFrameForUpSideDownOrientation:(NSNotification*)notification
 {
+    
     if ( (![TiUtils isIPad]) &&  ([[UIApplication sharedApplication] statusBarOrientation] == UIInterfaceOrientationPortraitUpsideDown) ) {
         CGRect statusBarFrame = [[UIApplication sharedApplication] statusBarFrame];
         if (statusBarFrame.size.height == 0) {
@@ -1112,7 +1117,7 @@
         return;
     }
     deviceOrientation = (UIInterfaceOrientation) newOrientation;
-   
+    FunctionName(@" New device Orientation : %d" , deviceOrientation); 
     if ([self shouldRotateToInterfaceOrientation:deviceOrientation checkModal:NO]) {
         [self updateOrientationHistory:deviceOrientation];
     }
@@ -1155,7 +1160,8 @@
 
 -(void)updateOrientationHistory:(UIInterfaceOrientation)newOrientation
 {
-	/*
+    FunctionName(@" newOrientation : %d ", newOrientation);
+    /*
 	 *	And now, to push the orientation onto the history stack. This could be
 	 *	expressed as a for loop, but the loop is so small that it might as well
 	 *	be unrolled. The end result of this push is that only other orientations
@@ -1199,6 +1205,102 @@
 }
 #endif
 
+-(CGAffineTransform)calculateTransfromForOrientation:(UIInterfaceOrientation)toOrientation
+{
+    CGAffineTransform transform;
+    UIInterfaceOrientation actualOrientation = deviceOrientation;
+    UIInterfaceOrientation statusBarOrientation = [[UIApplication sharedApplication] statusBarOrientation];
+    NSLog(@"statusBarOrientation %d,\ndeviceOrientation %d\n", statusBarOrientation, deviceOrientation);
+    
+    switch (deviceOrientation) {
+        case UIInterfaceOrientationPortrait:
+            switch (toOrientation) {
+                case UIInterfaceOrientationPortraitUpsideDown:
+                    transform = CGAffineTransformMakeRotation(M_PI);
+                    NSLog(@"pi transform");
+                    break;
+                case UIInterfaceOrientationLandscapeLeft:
+                    transform = CGAffineTransformMakeRotation(-M_PI_2);
+                    NSLog(@"- pi/2 transform");
+                    break;
+                case UIInterfaceOrientationLandscapeRight:
+                    transform = CGAffineTransformMakeRotation(M_PI_2);
+                    NSLog(@"pi/2 transform");
+                    break;
+                default:
+                    transform = CGAffineTransformIdentity;
+                break;
+            }
+            break;
+            
+        case UIInterfaceOrientationLandscapeRight:
+            switch (toOrientation) {
+                case UIInterfaceOrientationPortraitUpsideDown:
+                    transform = CGAffineTransformMakeRotation(M_PI_2);
+                                        NSLog(@" pi/2 transform");
+                    break;
+                case UIInterfaceOrientationLandscapeLeft:
+                    transform = CGAffineTransformMakeRotation(M_PI);
+                                        NSLog(@"pi transform");
+                    break;
+                case UIInterfaceOrientationPortrait:
+                    transform = CGAffineTransformMakeRotation(-M_PI_2);
+                                        NSLog(@"- pi/2 transform");
+                    break;
+                default:
+                    transform = CGAffineTransformIdentity;
+                    break;
+            }
+            break;
+            
+        case UIInterfaceOrientationLandscapeLeft:
+            switch (toOrientation) {
+                case UIInterfaceOrientationPortraitUpsideDown:
+                    transform = CGAffineTransformMakeRotation(-M_PI_2);
+                                        NSLog(@"- pi/2 transform");
+                    break;
+                case UIInterfaceOrientationLandscapeRight:
+                    transform = CGAffineTransformMakeRotation(M_PI);
+                                        NSLog(@"pi transform");
+                    break;
+                case UIInterfaceOrientationPortrait:
+                    transform = CGAffineTransformMakeRotation(M_PI_2);
+                                        NSLog(@" pi/2 transform");
+                    break;
+                default:
+                    transform = CGAffineTransformIdentity;
+                    break;
+            }
+            break;
+       
+        case UIInterfaceOrientationPortraitUpsideDown:
+            switch (toOrientation) {
+                case UIInterfaceOrientationPortrait:
+                    transform = CGAffineTransformMakeRotation(M_PI);
+                                        NSLog(@"pi transform");
+                    break;
+                case UIInterfaceOrientationLandscapeLeft:
+                    transform = CGAffineTransformMakeRotation(M_PI_2);
+                                        NSLog(@"pi/2 transform");
+                    break;
+                case UIInterfaceOrientationLandscapeRight:
+                    transform = CGAffineTransformMakeRotation(-M_PI_2);
+                                        NSLog(@"- pi/2 transform");
+                    break;
+                default:
+                    transform = CGAffineTransformIdentity;
+                    break;
+            }
+            break;
+            
+        default:
+            transform = CGAffineTransformIdentity;
+            break;
+    }
+    return transform;
+}
+
+
 -(void)manuallyRotateToOrientation:(UIInterfaceOrientation)newOrientation duration:(NSTimeInterval)duration
 {
     if (!forcingRotation) {
@@ -1207,7 +1309,6 @@
     UIApplication * ourApp = [UIApplication sharedApplication];
     UIInterfaceOrientation oldOrientation = [ourApp statusBarOrientation];
     CGAffineTransform transform;
-
     switch (newOrientation) {
         case UIInterfaceOrientationPortraitUpsideDown:
             transform = CGAffineTransformMakeRotation(M_PI);
@@ -1230,7 +1331,9 @@
         [UIView beginAnimations:@"orientation" context:nil];
         [UIView setAnimationDuration:duration];
     }
-    
+    if ([TiUtils isIOS8OrGreater]) {
+        transform = [self calculateTransfromForOrientation:newOrientation];
+    }
     if ((newOrientation != oldOrientation) && isCurrentlyVisible) {
         TiViewProxy<TiKeyboardFocusableView> *kfvProxy = [keyboardFocusedProxy retain];
         BOOL focusAfterBlur = [kfvProxy focused:nil];
@@ -1246,6 +1349,7 @@
         [kfvProxy release];
     }
 
+    
     UIView * ourView = [self view];
     [ourView setTransform:transform];
     [self resizeView];
